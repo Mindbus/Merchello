@@ -315,6 +315,11 @@ namespace Merchello.Core
         /// </param>
         public static void AddProductVariantValues(this ExtendedDataCollection extendedData, IProductVariant productVariant)
         {
+            var taxableGlobal = false;
+            bool.TryParse(MerchelloContext.Current.Services.StoreSettingService.GetByKey(Constants.StoreSetting.GlobalTaxableKey)?.Value, out taxableGlobal);
+            var shippableGlobal = false;
+            bool.TryParse(MerchelloContext.Current.Services.StoreSettingService.GetByKey(Constants.StoreSetting.GlobalShippableKey)?.Value, out shippableGlobal);
+
             extendedData.SetValue(Constants.ExtendedDataKeys.ProductKey, productVariant.ProductKey.ToString());
             extendedData.SetValue(Constants.ExtendedDataKeys.ProductVariantKey, productVariant.Key.ToString());
             extendedData.SetValue(Constants.ExtendedDataKeys.CostOfGoods, productVariant.CostOfGoods == null ? 0.ToString(CultureInfo.InvariantCulture) : ((decimal)productVariant.CostOfGoods).ToString(CultureInfo.InvariantCulture));
@@ -330,11 +335,18 @@ namespace Merchello.Core
             extendedData.SetValue(Constants.ExtendedDataKeys.SalePrice, productVariant.SalePrice == null ? 0.ToString(CultureInfo.InvariantCulture) : ((decimal)productVariant.SalePrice).ToString(CultureInfo.InvariantCulture));
             extendedData.SetValue(Constants.ExtendedDataKeys.TrackInventory, productVariant.TrackInventory.ToString());
             extendedData.SetValue(Constants.ExtendedDataKeys.OutOfStockPurchase, productVariant.OutOfStockPurchase.ToString());
-            extendedData.SetValue(Constants.ExtendedDataKeys.Taxable, productVariant.Taxable.ToString());
-            extendedData.SetValue(Constants.ExtendedDataKeys.Shippable, productVariant.Shippable.ToString());
+            extendedData.SetValue(Constants.ExtendedDataKeys.Taxable, (taxableGlobal || productVariant.Taxable).ToString());
+            extendedData.SetValue(Constants.ExtendedDataKeys.Shippable, (shippableGlobal || productVariant.Shippable).ToString());
             extendedData.SetValue(Constants.ExtendedDataKeys.Download, productVariant.Download.ToString());
             extendedData.SetValue(Constants.ExtendedDataKeys.DownloadMediaId, productVariant.DownloadMediaId.ToString());
             extendedData.SetValue(Constants.ExtendedDataKeys.VersionKey, productVariant.VersionKey.ToString());
+            foreach(var item in productVariant.DetachedContents)
+            {
+                foreach (var detachedContent in item.DetachedDataValues)
+                {
+                    extendedData.SetValue(detachedContent.Key, detachedContent.Value);
+                }
+            }
         }
 
         /// <summary>
@@ -723,7 +735,7 @@ namespace Merchello.Core
         /// </param>
         public static void AddAddress(this ExtendedDataCollection extendedData, IAddress address, AddressType addressType)
         {
-            extendedData.AddAddress(address, addressType == AddressType.Shipping 
+            extendedData.AddAddress(address, addressType == AddressType.Shipping
                             ? Constants.ExtendedDataKeys.ShippingDestinationAddress : Constants.ExtendedDataKeys.BillingAddress);
         }
 
@@ -740,7 +752,7 @@ namespace Merchello.Core
         /// The dictionary key used to reference the serialized <see cref="IAddress"/>
         /// </param>
         public static void AddAddress(this ExtendedDataCollection extendedData, IAddress address, string dictionaryKey)
-        {            
+        {
             extendedData.SetValue(dictionaryKey, JsonConvert.SerializeObject(address as Address));
         }
 

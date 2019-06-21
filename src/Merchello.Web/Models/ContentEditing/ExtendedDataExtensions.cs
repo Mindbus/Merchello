@@ -2,7 +2,7 @@
 {
     using System;
     using System.Globalization;
-
+    using System.Linq;
     using Merchello.Core;
     using Merchello.Core.Models;
 
@@ -19,6 +19,11 @@
         /// </param>
         public static void AddProductVariantValues(this ExtendedDataCollection extendedData, ProductVariantDisplay productVariant)
         {
+            var taxableGlobal = false;
+            bool.TryParse(MerchelloContext.Current.Services.StoreSettingService.GetByKey(Constants.StoreSetting.GlobalTaxableKey)?.Value, out taxableGlobal);
+            var shippableGlobal = false;
+            bool.TryParse(MerchelloContext.Current.Services.StoreSettingService.GetByKey(Constants.StoreSetting.GlobalShippableKey)?.Value, out shippableGlobal);
+
             extendedData.SetValue(Constants.ExtendedDataKeys.ProductKey, productVariant.ProductKey.ToString());
             extendedData.SetValue(Constants.ExtendedDataKeys.ProductVariantKey, productVariant.Key.ToString());
             extendedData.SetValue(Constants.ExtendedDataKeys.CostOfGoods, productVariant.CostOfGoods.ToString(CultureInfo.InvariantCulture));
@@ -34,11 +39,18 @@
             extendedData.SetValue(Constants.ExtendedDataKeys.SalePrice, productVariant.SalePrice.ToString(CultureInfo.InvariantCulture));
             extendedData.SetValue(Constants.ExtendedDataKeys.TrackInventory, productVariant.TrackInventory.ToString());
             extendedData.SetValue(Constants.ExtendedDataKeys.OutOfStockPurchase, productVariant.OutOfStockPurchase.ToString());
-            extendedData.SetValue(Constants.ExtendedDataKeys.Taxable, productVariant.Taxable.ToString());
-            extendedData.SetValue(Constants.ExtendedDataKeys.Shippable, productVariant.Shippable.ToString());           
+            extendedData.SetValue(Constants.ExtendedDataKeys.Taxable, (taxableGlobal || productVariant.Taxable).ToString());
+            extendedData.SetValue(Constants.ExtendedDataKeys.Shippable, (shippableGlobal || productVariant.Shippable).ToString());
             extendedData.SetValue(Constants.ExtendedDataKeys.Download, productVariant.Download.ToString());
             extendedData.SetValue(Constants.ExtendedDataKeys.DownloadMediaId, productVariant.DownloadMediaId.ToString(CultureInfo.InvariantCulture));
             extendedData.SetValue(Constants.ExtendedDataKeys.VersionKey, productVariant.VersionKey.ToString());
+            foreach (var item in productVariant.DetachedContents)
+            {
+                foreach (var detachedContent in item.DetachedDataValues)
+                {
+                    extendedData.SetValue(detachedContent.Key, detachedContent.Value);
+                }
+            }
         }
 
         #region INote

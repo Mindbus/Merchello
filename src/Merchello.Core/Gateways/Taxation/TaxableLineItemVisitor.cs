@@ -2,7 +2,7 @@
 {
     using System.Collections.Generic;
     using System.Globalization;
-
+    using System.Linq;
     using Merchello.Core.Models;
 
     /// <summary>
@@ -48,6 +48,19 @@
         public void Visit(ILineItem lineItem)
         {
             if (!lineItem.ExtendedData.GetTaxableValue()) return;
+
+            if (lineItem.LineItemType == LineItemType.Product)
+            {
+                var retailPriceIncludesVat = lineItem.ExtendedData.GetValue("retailPriceIncludesVat") == "1";
+                var actualUnitLinePrice = lineItem.Price;
+                if (retailPriceIncludesVat)
+                {
+                    lineItem.ExtendedData.SetValue("originalUnitLinePrice", lineItem.Price.ToString());
+                    actualUnitLinePrice = lineItem.Price / (1 + this._taxRate);
+                    lineItem.Price = actualUnitLinePrice;                    
+                }
+            }
+
             if (lineItem.LineItemType == LineItemType.Discount)
             {
                 lineItem.ExtendedData.SetValue(Constants.ExtendedDataKeys.LineItemTaxAmount, (-lineItem.TotalPrice * this._taxRate).ToString(CultureInfo.InvariantCulture));
